@@ -15,6 +15,20 @@ from .models import Post, Category, Comment
 
 
 class PostListView(ListView):
+    """
+    Представление для отображения списка опубликованных постов.
+    
+    Отображает все посты, которые соответствуют критериям публикации:
+    - Пост опубликован (is_published=True)
+    - Дата публикации меньше или равна текущей дате
+    - Категория поста опубликована
+    
+    Особенности:
+    - Пагинация: 10 постов на странице
+    - Аннотация: подсчет количества комментариев для каждого поста
+    - Оптимизация запросов: select_related для author, prefetch_related для category и location
+    - Сортировка: по убыванию даты публикации (новые первыми)
+    """
     model = Post
     paginate_by = 10
     template_name = 'blog/index.html'
@@ -33,6 +47,17 @@ class PostListView(ListView):
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
+    """
+    Представление для создания нового поста.
+    
+    Доступно только авторизованным пользователям.
+    Автоматически назначает автором текущего пользователя.
+    
+    Требует аутентификации:
+    - Неавторизованные пользователи перенаправляются на страницу входа
+    
+    После успешного создания поста перенаправляет на профиль автора.
+    """
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
@@ -48,6 +73,15 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 
 
 class PostUpdateView(UpdateView):
+    """
+    Представление для редактирования существующего поста.
+    
+    Доступно только автору поста. Проверяет права доступа через test_func.
+    Неавторизованные пользователи или пользователи, не являющиеся авторами,
+    перенаправляются на страницу детального просмотра поста.
+    
+    После успешного обновления перенаправляет на страницу поста.
+    """
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
@@ -74,6 +108,14 @@ class PostUpdateView(UpdateView):
 
 
 class PostDeleteView(LoginRequiredMixin, DeleteView):
+    """
+    Представление для удаления поста.
+    
+    Доступно только авторизованным пользователям.
+    Фильтрует queryset так, чтобы пользователь мог удалять только свои посты.
+    
+    После успешного удаления перенаправляет на главную страницу.
+    """
     model = Post
     template_name = 'blog/create.html'
     success_url = reverse_lazy('blog:index')
@@ -85,6 +127,18 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
 
 
 class PostDetailView(DetailView):
+    """
+    Представление для детального просмотра поста.
+    
+    Отображает полную информацию о посте с учетом правил видимости:
+    - Пост доступен автору всегда
+    - Для других пользователей пост доступен только если:
+        1. Пост опубликован
+        2. Категория поста опубликована
+        3. Дата публикации наступила
+    
+    В контексте также передаются все комментарии к посту и форма для добавления нового комментария.
+    """
     model = Post
     template_name = 'blog/detail.html'
 
@@ -111,6 +165,14 @@ class PostDetailView(DetailView):
 
 
 class ProfileView(ListView):
+    """
+    Представление для отображения профиля пользователя.
+    
+    Отображает все посты указанного пользователя, независимо от их статуса публикации.
+    Включает информацию о пользователе и аннотирует посты количеством комментариев.
+    
+    Пагинация: 10 постов на странице.
+    """
     model = Post
     template_name = 'blog/profile.html'
     paginate_by = 10
@@ -132,6 +194,18 @@ class ProfileView(ListView):
 
 
 class CategoryPostsView(ListView):
+    """
+    Представление для отображения постов определенной категории.
+    
+    Отображает только опубликованные посты в опубликованной категории.
+    Категория определяется по slug в URL.
+    
+    Особенности:
+    - Отображает только посты с датой публикации не позже текущей
+    - Аннотирует посты количеством комментариев
+    - Пагинация: 10 постов на странице
+    - В контексте передается объект категории
+    """
     model = Post
     paginate_by = 10
     template_name = 'blog/category.html'
@@ -161,6 +235,14 @@ class CategoryPostsView(ListView):
 
 
 class EditProfileView(LoginRequiredMixin, UpdateView):
+    """
+    Представление для редактирования профиля пользователя.
+    
+    Доступно только авторизованным пользователям.
+    Позволяет пользователю редактировать свои данные профиля.
+    
+    После успешного обновления перенаправляет на страницу профиля.
+    """
     model = User
     form_class = UserProfileForm
     template_name = 'blog/user.html'
@@ -175,6 +257,14 @@ class EditProfileView(LoginRequiredMixin, UpdateView):
 
 
 class AddCommentView(LoginRequiredMixin, CreateView):
+    """
+    Представление для добавления комментария к посту.
+    
+    Доступно только авторизованным пользователям.
+    Автоматически связывает комментарий с постом и текущим пользователем как автором.
+    
+    После успешного создания комментария перенаправляет на страницу поста.
+    """
     model = Comment
     form_class = CommentForm
     template_name = 'comments.html'
@@ -192,6 +282,14 @@ class AddCommentView(LoginRequiredMixin, CreateView):
 
 
 class EditCommentView(LoginRequiredMixin, UpdateView):
+    """
+    Представление для редактирования существующего комментария.
+    
+    Доступно только автору комментария.
+    Проверяет права доступа: если пользователь не является автором, вызывает PermissionDenied.
+    
+    После успешного редактирования перенаправляет на главную страницу.
+    """
     model = Comment
     form_class = CommentForm
     template_name = 'blog/comment.html'
@@ -216,6 +314,14 @@ class EditCommentView(LoginRequiredMixin, UpdateView):
 
 
 class DeleteCommentView(LoginRequiredMixin, DeleteView):
+    """
+    Представление для удаления комментария.
+    
+    Доступно только автору комментария.
+    Проверяет права доступа: если пользователь не является автором, вызывает PermissionDenied.
+    
+    После успешного удаления перенаправляет на страницу поста, к которому относился комментарий.
+    """
     model = Comment
     template_name = 'blog/comment.html'
     pk_url_kwarg = 'comment_id'
@@ -234,3 +340,4 @@ class DeleteCommentView(LoginRequiredMixin, DeleteView):
 
     def post(self, request, *args, **kwargs):
         return self.delete(request, *args, **kwargs)
+    
